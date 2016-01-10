@@ -8,14 +8,17 @@
 
 #import "PageView.h"
 
+
 @interface PageView()<UIScrollViewDelegate>
 @property (nonatomic, strong) UIScrollView * scrollView;
 @property (nonatomic, strong) UIView * tabView;
 @property (nonatomic, strong) NSLayoutConstraint * tabViewHeightConstraint;
 @property (nonatomic, strong) NSMutableArray * labels;
 @property (nonatomic, strong) NSLayoutConstraint * bottomLineXConstraint;
+@property (nonatomic, strong) NSLayoutConstraint * bottomLineWidthConstraint;
 @property (nonatomic, strong) UIView * bottomView;
 @property (nonatomic, assign) NSInteger lastSelection;
+@property (nonatomic, assign) BOOL isInitView;
 @end
 
 @implementation PageView
@@ -45,6 +48,7 @@
 }
 
 -(void)initView{
+    _isInitView = NO;
     _lastSelection = -1;
     _tabHeight = 44.f;
     _titleNormalColor = [UIColor lightGrayColor];
@@ -78,6 +82,9 @@
     [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-0-[_scrollView]-0-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(self, _scrollView)]];
     [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[_tabView]-0-[_scrollView]-0-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(self, _scrollView, _tabView)]];
     
+    _bottomLineWidthConstraint = [NSLayoutConstraint constraintWithItem:_bottomView attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:1.0];
+    [_tabView addConstraint:_bottomLineWidthConstraint];
+    
     _scrollView.translatesAutoresizingMaskIntoConstraints = NO;
     _tabView.translatesAutoresizingMaskIntoConstraints = NO;
     _bottomView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -89,11 +96,30 @@
     _tabView.layer.shadowOffset = CGSizeMake(0, 1);//shadowOffset阴影偏移,x向右偏移4，y向下偏移4，默认(0, -3),这个跟shadowRadius配合使用
     _tabView.layer.shadowOpacity = 0.8;//阴影透明度，默认0
     _tabView.layer.shadowRadius = 1;//阴影半径，默认3
-
+    
 }
 
 -(void)layoutSubviews{
     [super layoutSubviews];
+    if (!_isInitView) {
+        [self initChildView];
+        
+        [_tabView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[_bottomView(height)]-0-|" options:0 metrics:@{@"height":@(_bottomLineHeight)} views:NSDictionaryOfVariableBindings(_tabView, _bottomView)]];
+        _isInitView = YES;
+    }
+}
+
+-(void)initChildView{
+    for (UIView * view in _tabView.subviews) {
+        if (![view isEqual:_bottomView]) {
+            [view removeFromSuperview];
+        }
+    }
+    
+    for (UIView * view in _scrollView.subviews) {
+        [view removeFromSuperview];
+    }
+    
     CGFloat tabWidth = self.frame.size.width / _titles.count;
     for (int i = 0; i < _titles.count; i ++) {
         UILabel * label = [UILabel new];
@@ -112,6 +138,9 @@
         [_tabView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-(x)-[label(width)]" options:0 metrics:@{@"x": @(i * tabWidth), @"width":@(tabWidth)} views:NSDictionaryOfVariableBindings(_tabView, label)]];
         [_labels addObject:label];
     }
+    
+    _bottomLineWidthConstraint.constant = tabWidth;
+    
     CGFloat width = self.frame.size.width;
     CGFloat height = _scrollView.frame.size.height;
     for (int i = 0; i < _viewControllers.count; i ++) {
@@ -124,10 +153,6 @@
     }
     
     [_scrollView setContentSize:CGSizeMake(width * _viewControllers.count, 0)];
-    
-    [_tabView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:[_bottomView(width)]" options:0 metrics:@{@"width":@(tabWidth)} views:NSDictionaryOfVariableBindings(_tabView, _bottomView)]];
-    [_tabView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[_bottomView(height)]-0-|" options:0 metrics:@{@"height":@(_bottomLineHeight)} views:NSDictionaryOfVariableBindings(_tabView, _bottomView)]];
-    
 }
 
 -(void)itemTapAction:(UITapGestureRecognizer*)sender{
@@ -142,7 +167,6 @@
         }else{
             label.textColor = _titleNormalColor;
         }
-
     }
 }
 
@@ -171,19 +195,19 @@
 -(void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
     CGFloat x = scrollView.contentOffset.x;
     if (x >= 0 && x <= _scrollView.frame.size.width * _viewControllers.count) {
-            CGFloat xx = x / _scrollView.frame.size.width;
-            NSInteger index = [[NSNumber numberWithFloat:xx] integerValue];
-            [self setSelection:index];
+        CGFloat xx = x / _scrollView.frame.size.width;
+        NSInteger index = [[NSNumber numberWithFloat:xx] integerValue];
+        [self setSelection:index];
     }
 }
 
 
 /*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect {
-    // Drawing code
-}
-*/
+ // Only override drawRect: if you perform custom drawing.
+ // An empty implementation adversely affects performance during animation.
+ - (void)drawRect:(CGRect)rect {
+ // Drawing code
+ }
+ */
 
 @end
